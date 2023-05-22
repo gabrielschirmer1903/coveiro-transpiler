@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="index.css">
+    <title>Transpiler</title>
+</head>
+
+<body>
+    <div class="wrapper">
+        <h2>Codigo:</h2>
+        <div class="inpupt-wrapper">
+            <textarea id="codigo" rows="20" cols="80" placeholder="Insira um trecho de codigo em Visualg: ">
+local function greet(name)
+    print("Hello, " .. name .. "!")
+end
+
+local age = 25
+local isStudent = true
+
+greet("John")
+print("Age: " .. age)
+print("Is a student: " .. tostring(isStudent))
+        </textarea><br>
+        </div>
+        <button id="btn" onclick="contarPalavras()">Contar</button>
+        <div class="res">
+            <p id="res"></p>
+        </div>
+    </div>
+    <div class="wrapper2">
+        <h2>Contador: </h2>
+        <div class="contador">
+            <p id="contador"></p>
+            <button id="btn" onclick="limpacontador()">Limpar</button>
+        </div>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+
+</html>
