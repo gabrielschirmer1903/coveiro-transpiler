@@ -18,29 +18,27 @@ function contarPalavras() {
     const text = palavrasCodigo[i];
     const str = text.toLowerCase();
     // console.info(str)
-    if (str.match('local')) {
-      if (str.match('function')) {
-        // Extract the function name from the Lua code
-        const functionName = str.match(/function\s+(\w+)/);
+    if (str.match('function')) {
+      // Extract the function name from the Lua code
+      const functionName = str.match(/function\s+(\w+)/);
 
-        // Extract the function parameters from the Lua code
-        const parameters = str.match(/function\s+\w+\s*\((.*?)\)/);
+      // Extract the function parameters from the Lua code
+      const parameters = str.match(/function\s+\w+\s*\((.*?)\)/);
 
-        // Remove 'local' keyword from the parameter declaration
-        const transpiledParameters = parameters[1].replace(
-          /local\s+([\w, ]+)/,
-          '$1',
-        );
+      // Remove 'local' keyword from the parameter declaration
+      const transpiledParameters = parameters[1].replace(
+        /local\s+([\w, ]+)/,
+        '$1',
+      );
 
-        // Extract the function body from the Lua code
-        const body = str.match(/function[\s\S]*?end/);
-        const bodyString = body ? body[0] : '';
+      // Extract the function body from the Lua code
+      const body = str.match(/function[\s\S]*?end/);
+      const bodyString = body ? body[0] : '';
 
-        // Build the transpiled function declaration string for Python
-        const transpiledFunction = `def ${functionName[1]}(${transpiledParameters}):    ${bodyString}`;
+      // Build the transpiled function declaration string for Python
+      const transpiledFunction = `def ${functionName[1]}(${transpiledParameters}):    ${bodyString}`;
 
-        transpiledCode.push(transpiledFunction);
-      }
+      transpiledCode.push(transpiledFunction);
     }
     if (str.match(/^local\s+\w+\s*=/)) {
       // Transpile the Lua variable declaration to Python
@@ -61,6 +59,16 @@ function contarPalavras() {
       // Push an empty line into the transpiledCode array
       transpiledCode.push('');
     }
+
+    if (str.match(/if\s+(.*?)\s+then\s+(.*?)\s+else\s+(.*?)\s+end/g)) {
+      // Transpile the Lua if/then statement to Python
+      const transpiledIf = str.replace(/if\s+(.*?)\s+then\s+(.*?)\s+else\s+(.*?)\s+end/g,
+      'if $1 :\n	$2\nelse:\n	$3');
+
+      // Push the transpiled if/then statement into the transpiledCode array
+      transpiledCode.push(transpiledIf);
+    }
+
     console.log(transpiledCode);
 
     printPalavras(
