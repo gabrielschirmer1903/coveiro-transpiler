@@ -7,16 +7,29 @@ function contarPalavras() {
   const codigo = document.getElementById('CodeInput').value;
   let palavrasCodigo = codigo.split('\n');
   console.log(palavrasCodigo);
-  var contEscreva = 0;
-  var contLeia = 0;
-  var contEscreval = 0;
-  var contSe = 0;
-  var contFimse = 0;
-  var contEntao = 0;
 
   for (let i = 0; i < palavrasCodigo.length; i++) {
     const text = palavrasCodigo[i];
     const str = text.toLowerCase();
+    if (str.match(/^\w+\s*=\s*(.+)/)) {
+      console.log("teste")
+      const assignmentMatch = str.match(/^(\w+)\s*=\s*(.+)/);
+      if (assignmentMatch) {
+        const assignedVariable = assignmentMatch[1];
+        const assignedValue = assignmentMatch[2];
+  
+        if (!variableDeclarationAdded && assignedVariable === variableName) {
+          // Add the variable declaration with the initial value
+          const declarationStatement = variableInitialValue ? `${assignedVariable} = ${variableInitialValue}` : assignedVariable;
+          variableDeclaration = variableDeclarationAdded ? assignedVariable : `local ${declarationStatement}`;
+          variableDeclarationAdded = true;
+        }
+  
+        const transpiledVariableAssignment = `${assignedVariable} = ${assignedValue}`;
+        transpiledCode.push(transpiledVariableAssignment);
+      }
+    }
+  
     // console.info(str)
     if (str.match('function')) {
       // Extract the function name from the Lua code
@@ -26,27 +39,20 @@ function contarPalavras() {
       const parameters = str.match(/function\s+\w+\s*\((.*?)\)/);
 
       // Remove 'local' keyword from the parameter declaration
-      const transpiledParameters = parameters[1].replace(
-        /local\s+([\w, ]+)/,
-        '$1',
-      );
+      const transpiledParameters = parameters ? parameters[1].replace(/local\s+([\w, ]+)/, '$1') : '';
 
       // Extract the function body from the Lua code
       const body = str.match(/function[\s\S]*?end/);
       const bodyString = body ? body[0] : '';
 
       // Build the transpiled function declaration string for Python
-      const transpiledFunction = `def ${functionName[1]}(${transpiledParameters}):    ${bodyString}`;
+      const transpiledFunction = `def ${functionName[1]}(${transpiledParameters}):\n${bodyString}`;
 
+      // Push the transpiled function into the transpiledCode array
       transpiledCode.push(transpiledFunction);
     }
-    if (str.match(/^local\s+\w+\s*=/)) {
-      // Transpile the Lua variable declaration to Python
-      const transpiledVariable = str.replace(/local\s+(\w+)\s*=/, 'let $1 =');
 
-      // Push the transpiled variable declaration into the transpiledCode array
-      transpiledCode.push(transpiledVariable);
-    }
+
     if (str.match('print')) {
       // Transpile the Lua print statement to Python
       const transpiledPrint = str.replace(/print\s*\((.*?)\)/g, 'print($1)');
@@ -54,55 +60,92 @@ function contarPalavras() {
       // Push the transpiled print statement into the transpiledCode array
       transpiledCode.push(transpiledPrint);
     }
-    // Check if the line contains only blank spaces or space characters
+
+    if (str.match(/^\w+\s*\((.*?)\)$/)) {
+      // Transpile the Lua function invocation to Python
+      const transpiledInvocation = str.replace(/(\w+)\s*\((.*?)\)/, '$1($2)');
+
+      // Push the transpiled function invocation into the transpiledCode array
+      transpiledCode.push(transpiledInvocation);
+    }
+
     if (!str.trim()) {
       // Push an empty line into the transpiledCode array
       transpiledCode.push('');
     }
 
-    if (str.match(/if\s+(.*?)\s+then\s+(.*?)\s+else\s+(.*?)\s+end/g)) {
-      // Transpile the Lua if/then statement to Python
-      const transpiledIf = str.replace(/if\s+(.*?)\s+then\s+(.*?)\s+else\s+(.*?)\s+end/g,
-      'if $1 :\n	$2\nelse:\n	$3');
-
-      // Push the transpiled if/then statement into the transpiledCode array
+    // Assuming the Lua if statement is stored in the 'str' variable
+    if (str.includes('if')) {
+      // Extract the condition from the Lua code
+      const condition = str.match(/if\s+(.+)/)[1];
+    
+      // Replace "then" with ":" in the condition
+      const modifiedCondition = condition.replace(/\bthen\b/, ':');
+    
+      // Build the transpiled if statement for Python
+      const transpiledIf = `if ${modifiedCondition}`;
+    
+      // Push the transpiled if statement into the transpiledCode array
       transpiledCode.push(transpiledIf);
     }
 
-    console.log(transpiledCode);
+    if (str.includes('else')) {
+      // Transpile the "else" statement to "else:"
+      const transpiledElse = str.replace(/else\s*/, 'else:');
+    
+      // Push the transpiled "else" statement into the transpiledCode array
+      transpiledCode.push(transpiledElse);
+    }
 
-    printPalavras(
-      contEscreva,
-      contEscreval,
-      contLeia,
-      contSe,
-      contFimse,
-      contEntao,
-    );
+    if (str.includes('while')) {
+      // Extract the condition from the Lua code
+      const condition = str.match(/while\s+(.+)/)[1];
+    
+      // Replace "do" with ":" in the condition
+      const modifiedCondition = condition.replace(/\bdo\b/, ':');
+    
+      // Build the transpiled while statement for Python
+      const transpiledWhile = `while ${modifiedCondition}`;
+    
+      // Push the transpiled while statement into the transpiledCode array
+      transpiledCode.push(transpiledWhile);
+    }
+    
+  }
+  updateOutput(transpiledCode);
+}
+
+function updateOutput(transpiledCode) {
+  const outputElement = document.getElementById('contador');
+  outputElement.innerHTML = '';
+
+  for (let i = 0; i < transpiledCode.length; i++) {
+    let line = transpiledCode[i];
+    
+    // Replace space characters with HTML entity representation
+    line = line.replace(/ /g, '&nbsp;');
+    
+    // Append the line to the output element
+    outputElement.innerHTML += `<p>${line}</p>`;
   }
 }
 
-function printPalavras(
-  contEscreva,
-  contEscreval,
-  contLeia,
-  contSe,
-  contFimse,
-  contEntao,
-) {
-  document.getElementById(
-    'contador',
-  ).innerHTML = `<p> Escreva: ${contEscreva} <br>
-           Escreval: ${contEscreval} <br>
-           Leia: ${contLeia} <br>
-           Se: ${contSe} <br>
-           Fimse: ${contFimse} <br>
-           Entao: ${contEntao} <br>
-    </p>`;
+// Function to add a line of transpiled code to the transpiledCode array
+function addTranspiledLine(line) {
+  // Push the line of code to the transpiledCode array
+  transpiledCode.push(line);
+
+  // Update the output
+  updateOutput();
 }
 
+// Function to clear the transpiledCode array and update the output
 function limpacontador() {
-  document.getElementById('contador').innerHTML = '';
+  // Clear the transpiledCode array
+  transpiledCode = [];
+
+  // Update the output
+  updateOutput();
 }
 
 function transpileLuaToRuby(luaCode) {
