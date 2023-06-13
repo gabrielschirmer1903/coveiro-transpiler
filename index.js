@@ -52,6 +52,16 @@ function contarPalavras() {
       transpiledCode.push(transpiledFunction);
     }
 
+    if (str.startsWith('local') && !str.includes('function')) {
+      // Variable declaration with "local" keyword
+      const declaration = str.replace(/^local\s+/, '');
+      transpiledCode.push(declaration);
+    } else if (str.includes('=')) {
+      // Variable assignment or mathematical operation
+      const assignment = str.replace('=', '=');
+      transpiledCode.push(assignment);
+    }
+
 
     if (str.match('print')) {
       // Transpile the Lua print statement to Python
@@ -61,18 +71,13 @@ function contarPalavras() {
       transpiledCode.push(transpiledPrint);
     }
 
-    if (str.match(/^\w+\s*\((.*?)\)$/)) {
-      // Transpile the Lua function invocation to Python
-      const transpiledInvocation = str.replace(/(\w+)\s*\((.*?)\)/, '$1($2)');
+    // if (str.match(/^\w+\s*\((.*?)\)$/)) {
+    //   // Transpile the Lua function invocation to Python
+    //   const transpiledInvocation = str.replace(/(\w+)\s*\((.*?)\)/, '$1($2)');
 
-      // Push the transpiled function invocation into the transpiledCode array
-      transpiledCode.push(transpiledInvocation);
-    }
-
-    if (!str.trim()) {
-      // Push an empty line into the transpiledCode array
-      transpiledCode.push('');
-    }
+    //   // Push the transpiled function invocation into the transpiledCode array
+    //   transpiledCode.push(transpiledInvocation);
+    // }
 
     // Assuming the Lua if statement is stored in the 'str' variable
     if (str.includes('if')) {
@@ -109,6 +114,11 @@ function contarPalavras() {
     
       // Push the transpiled while statement into the transpiledCode array
       transpiledCode.push(transpiledWhile);
+    }
+
+    if (!str.trim()) {
+      // Push an empty line into the transpiledCode array
+      transpiledCode.push('');
     }
     
   }
