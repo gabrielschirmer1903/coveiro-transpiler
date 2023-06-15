@@ -11,25 +11,26 @@ function contarPalavras() {
   for (let i = 0; i < palavrasCodigo.length; i++) {
     const text = palavrasCodigo[i];
     const str = text.toLowerCase();
+    const leadingSpaces = getLeadingSpaces(text);
+
     if (str.match(/^\w+\s*=\s*(.+)/)) {
-      console.log("teste")
       const assignmentMatch = str.match(/^(\w+)\s*=\s*(.+)/);
       if (assignmentMatch) {
         const assignedVariable = assignmentMatch[1];
         const assignedValue = assignmentMatch[2];
-  
+
         if (!variableDeclarationAdded && assignedVariable === variableName) {
           // Add the variable declaration with the initial value
           const declarationStatement = variableInitialValue ? `${assignedVariable} = ${variableInitialValue}` : assignedVariable;
           variableDeclaration = variableDeclarationAdded ? assignedVariable : `local ${declarationStatement}`;
           variableDeclarationAdded = true;
         }
-  
+
         const transpiledVariableAssignment = `${assignedVariable} = ${assignedValue}`;
-        transpiledCode.push(transpiledVariableAssignment);
+        transpiledCode.push(leadingSpaces + transpiledVariableAssignment);
       }
     }
-  
+
     // console.info(str)
     if (str.match('function')) {
       // Extract the function name from the Lua code
@@ -49,79 +50,120 @@ function contarPalavras() {
       const transpiledFunction = `def ${functionName[1]}(${transpiledParameters}):\n${bodyString}`;
 
       // Push the transpiled function into the transpiledCode array
-      transpiledCode.push(transpiledFunction);
+
+      transpiledCode.push(leadingSpaces + transpiledFunction);
     }
 
     if (str.startsWith('local') && !str.includes('function')) {
       // Variable declaration with "local" keyword
       const declaration = str.replace(/^local\s+/, '');
-      transpiledCode.push(declaration);
-    } else if (str.includes('=')) {
+
+      transpiledCode.push(leadingSpaces + declaration);
+
+    } else if (str.includes('=') && !str.includes('function') && !str.includes('if') && !str.includes('else') && !str.includes('elseif') && !str.includes('while')) {
       // Variable assignment or mathematical operation
       const assignment = str.replace('=', '=');
-      transpiledCode.push(assignment);
+
+      transpiledCode.push(leadingSpaces + assignment);
     }
 
 
     if (str.match('print')) {
       // Transpile the Lua print statement to Python
-      const transpiledPrint = str.replace(/print\s*\((.*?)\)/g, 'print($1)');
+      let transpiledPrint
+      let condi = str.match(/print\s*\(\s*(.*?)\s*\)/);
 
-      // Push the transpiled print statement into the transpiledCode array
-      transpiledCode.push(transpiledPrint);
+      if (str.includes('..')) {
+        let splitStr = condi[1].split('..');
+
+        transpiledPrint = "str(" + splitStr[0] + ")" + '+';
+        for(let i = 1; i < splitStr.length; i++){
+          transpiledPrint = transpiledPrint + " str(" + splitStr[i] + ")" + ' +';
+        }
+
+        transpiledPrint = transpiledPrint.substring(0, transpiledPrint.length - 1);
+        transpiledPrint = "print(" + transpiledPrint.replace(/"'/g, '') + ")";
+      } else {
+        transpiledPrint = str.replace(/"'/g, 'print($1)');
+      }
+
+      transpiledCode.push(leadingSpaces + transpiledPrint);
     }
 
-    // if (str.match(/^\w+\s*\((.*?)\)$/)) {
-    //   // Transpile the Lua function invocation to Python
-    //   const transpiledInvocation = str.replace(/(\w+)\s*\((.*?)\)/, '$1($2)');
-
-    //   // Push the transpiled function invocation into the transpiledCode array
-    //   transpiledCode.push(transpiledInvocation);
-    // }
+    if (str.match(/^\w+\s*\((.*?)\)$/)) {
+      // Transpile the Lua function invocation to Python
+      const transpiledInvocation = str.replace(/(\w+)\s*\((.*?)\)/, '$1($2)');
+      // Push the transpiled function invocation into the transpiledCode array
+      
+      transpiledCode.push(leadingSpaces + transpiledInvocation);
+    }
 
     // Assuming the Lua if statement is stored in the 'str' variable
-    if (str.includes('if')) {
+    if (str.includes('if') && !str.includes('elseif')) {
       // Extract the condition from the Lua code
       const condition = str.match(/if\s+(.+)/)[1];
-    
+
       // Replace "then" with ":" in the condition
       const modifiedCondition = condition.replace(/\bthen\b/, ':');
-    
+
       // Build the transpiled if statement for Python
       const transpiledIf = `if ${modifiedCondition}`;
-    
+
       // Push the transpiled if statement into the transpiledCode array
-      transpiledCode.push(transpiledIf);
+      transpiledCode.push(leadingSpaces + transpiledIf);
     }
 
-    if (str.includes('else')) {
+    if (str.includes('else') && !str.includes('elseif')) {
       // Transpile the "else" statement to "else:"
-      const transpiledElse = str.replace(/else\s*/, 'else:');
-    
+      const transpiledElse = str.replace(/(^\s*)else\s*(.+)/, (_, leadingSpaces, rest) => `${leadingSpaces}else:${rest}`);
+
       // Push the transpiled "else" statement into the transpiledCode array
-      transpiledCode.push(transpiledElse);
+      transpiledCode.push(transpiledElse + `:`);
+    }
+
+    if (str.includes('elseif')) {
+      // Transpile "elseif" to "elif" in Python
+      const transpiledElseIf = str.replace(/(^\s*)elseif\s+(.+)/, (_, leadingSpaces, condition) => `${leadingSpaces}elif ${condition}`);
+
+      const transpiledLine = transpiledElseIf.replace(/\bthen\b/, ':');
+
+
+      console.log(transpiledElseIf)
+      console.log(transpiledLine)
+      transpiledCode.push(transpiledLine);
     }
 
     if (str.includes('while')) {
       // Extract the condition from the Lua code
       const condition = str.match(/while\s+(.+)/)[1];
-    
+
       // Replace "do" with ":" in the condition
       const modifiedCondition = condition.replace(/\bdo\b/, ':');
-    
+
       // Build the transpiled while statement for Python
       const transpiledWhile = `while ${modifiedCondition}`;
-    
+
       // Push the transpiled while statement into the transpiledCode array
-      transpiledCode.push(transpiledWhile);
+      transpiledCode.push(leadingSpaces + transpiledWhile);
+    }
+
+    if (str.includes('return')) {
+      // Extract the value from the Lua code
+      const value = str.match(/return\s+(.+)/)[1];
+
+      // Build the transpiled return statement for Python
+      const transpiledReturn = `return ${value}`;
+
+      // Push the transpiled return statement into the transpiledCode array
+      transpiledCode.push(leadingSpaces + transpiledReturn);
     }
 
     if (!str.trim()) {
       // Push an empty line into the transpiledCode array
-      transpiledCode.push('');
+      transpiledCode.push(leadingSpaces + '');
     }
-    
   }
+
   updateOutput(transpiledCode);
 }
 
@@ -131,10 +173,10 @@ function updateOutput(transpiledCode) {
 
   for (let i = 0; i < transpiledCode.length; i++) {
     let line = transpiledCode[i];
-    
+
     // Replace space characters with HTML entity representation
     line = line.replace(/ /g, '&nbsp;');
-    
+
     // Append the line to the output element
     outputElement.innerHTML += `<p>${line}</p>`;
   }
@@ -143,8 +185,9 @@ function updateOutput(transpiledCode) {
 // Function to add a line of transpiled code to the transpiledCode array
 function addTranspiledLine(line) {
   // Push the line of code to the transpiledCode array
-  transpiledCode.push(line);
+  const leadingSpaces = getLeadingSpaces(line);
 
+  transpiledCode.push(leadingSpaces + line);
   // Update the output
   updateOutput();
 }
@@ -156,6 +199,12 @@ function limpacontador() {
 
   // Update the output
   updateOutput();
+}
+
+function getLeadingSpaces(str) {
+  const leadingSpacesMatch = str.match(/^\s*/);
+
+  return leadingSpacesMatch[0];
 }
 
 function transpileLuaToRuby(luaCode) {
