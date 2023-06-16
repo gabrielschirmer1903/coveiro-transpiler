@@ -124,12 +124,8 @@ function contarPalavras() {
     if (str.includes('elseif')) {
       // Transpile "elseif" to "elif" in Python
       const transpiledElseIf = str.replace(/(^\s*)elseif\s+(.+)/, (_, leadingSpaces, condition) => `${leadingSpaces}elif ${condition}`);
-
       const transpiledLine = transpiledElseIf.replace(/\bthen\b/, ':');
 
-
-      console.log(transpiledElseIf)
-      console.log(transpiledLine)
       transpiledCode.push(transpiledLine);
     }
 
@@ -168,18 +164,10 @@ function contarPalavras() {
 }
 
 function updateOutput(transpiledCode) {
-  const outputElement = document.getElementById('contador');
-  outputElement.innerHTML = '';
+  const textarea = document.getElementById('contador');
+  console.log(transpiledCode)
 
-  for (let i = 0; i < transpiledCode.length; i++) {
-    let line = transpiledCode[i];
-
-    // Replace space characters with HTML entity representation
-    line = line.replace(/ /g, '&nbsp;');
-
-    // Append the line to the output element
-    outputElement.innerHTML += `<p>${line}</p>`;
-  }
+  textarea.value = transpiledCode.join('\n');
 }
 
 // Function to add a line of transpiled code to the transpiledCode array
@@ -195,10 +183,10 @@ function addTranspiledLine(line) {
 // Function to clear the transpiledCode array and update the output
 function limpacontador() {
   // Clear the transpiledCode array
-  transpiledCode = [];
+  const textarea = document.getElementById('contador');
 
-  // Update the output
-  updateOutput();
+  transpiledCode = [];
+  textarea.value = '';
 }
 
 function getLeadingSpaces(str) {
@@ -208,7 +196,7 @@ function getLeadingSpaces(str) {
 }
 
 function transpileLuaToRuby(luaCode) {
-  let rubyCode = '';
+  let rubyCode = [];
 
   // Função auxiliar para gerar espaçamento
   function indent(level) {
@@ -271,7 +259,7 @@ function transpileLuaToRuby(luaCode) {
 
     // Verifica se a linha é um comentário
     if (line.startsWith('--')) {
-      rubyCode += `${indent(indentLevel)}# ${line.substring(2)}\n`;
+      rubyCode.push(`${indent(indentLevel)}${line}\n`);
       continue;
     }
 
@@ -284,15 +272,15 @@ function transpileLuaToRuby(luaCode) {
       const expression = line.substring(keyword.length).trim();
       const translatedKeyword = keywordTranslations[keyword];
       if (translatedKeyword) {
-        rubyCode += `${indent(indentLevel)}${translatedKeyword}`;
+        rubyCode.push(`${indent(indentLevel)}${translatedKeyword}`);
         if (expression) {
           const transpiledExpression = transpileExpression(expression);
-          rubyCode += ` ${transpiledExpression}`;
+          rubyCode.push(`${transpiledExpression}`);
         }
         if (keyword === 'then' || keyword === 'do') {
           indentLevel++;
         }
-        rubyCode += '\n';
+        rubyCode.push('\n');
         if (keyword === 'else' || keyword === 'end') {
           indentLevel--;
         }
@@ -303,7 +291,7 @@ function transpileLuaToRuby(luaCode) {
     // Verifica se a linha contém uma expressão
     const transpiledExpression = transpileExpression(line);
     if (transpiledExpression) {
-      rubyCode += `${indent(indentLevel)}${transpiledExpression}\n`;
+      rubyCode.push(`${indent(indentLevel)}${transpiledExpression}\n`);
     }
   }
 
@@ -318,5 +306,5 @@ function transpileLuaCode() {
   const rubyCode = transpileLuaToRuby(luaCode);
 
   // Exibe o código Ruby resultante
-  document.getElementById('rubyCodeOutput').textContent = rubyCode;
+  updateOutput(rubyCode);
 }
