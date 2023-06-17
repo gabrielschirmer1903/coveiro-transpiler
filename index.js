@@ -13,23 +13,23 @@ function contarPalavras() {
     const str = text.toLowerCase();
     const leadingSpaces = getLeadingSpaces(text);
 
-    if (str.match(/^\w+\s*=\s*(.+)/)) {
-      const assignmentMatch = str.match(/^(\w+)\s*=\s*(.+)/);
-      if (assignmentMatch) {
-        const assignedVariable = assignmentMatch[1];
-        const assignedValue = assignmentMatch[2];
+    // if (str.match(/^\w+\s*=\s*(.+)/)) {
+    //   const assignmentMatch = str.match(/^(\w+)\s*=\s*(.+)/);
+    //   if (assignmentMatch) {
+    //     const assignedVariable = assignmentMatch[1];
+    //     const assignedValue = assignmentMatch[2];
 
-        if (!variableDeclarationAdded && assignedVariable === variableName) {
-          // Add the variable declaration with the initial value
-          const declarationStatement = variableInitialValue ? `${assignedVariable} = ${variableInitialValue}` : assignedVariable;
-          variableDeclaration = variableDeclarationAdded ? assignedVariable : `local ${declarationStatement}`;
-          variableDeclarationAdded = true;
-        }
+    //     if (!variableDeclarationAdded && assignedVariable === variableName) {
+    //       // Add the variable declaration with the initial value
+    //       const declarationStatement = variableInitialValue ? `${assignedVariable} = ${variableInitialValue}` : assignedVariable;
+    //       variableDeclaration = variableDeclarationAdded ? assignedVariable : `${declarationStatement}`;
+    //       variableDeclarationAdded = true;
+    //     }
 
-        const transpiledVariableAssignment = `${assignedVariable} = ${assignedValue}`;
-        transpiledCode.push(leadingSpaces + transpiledVariableAssignment);
-      }
-    }
+    //     const transpiledVariableAssignment = `${assignedVariable} = ${assignedValue}`;
+    //     transpiledCode.push(leadingSpaces + transpiledVariableAssignment.trimStart());
+    //   }
+    // }
 
     // console.info(str)
     if (str.match('function')) {
@@ -47,26 +47,50 @@ function contarPalavras() {
       const bodyString = body ? body[0] : '';
 
       // Build the transpiled function declaration string for Python
-      const transpiledFunction = `def ${functionName[1]}(${transpiledParameters}):\n${bodyString}`;
+      const transpiledFunction = `def ${functionName[1]}(${transpiledParameters}):`;
 
       // Push the transpiled function into the transpiledCode array
 
-      transpiledCode.push(leadingSpaces + transpiledFunction);
+      transpiledCode.push(leadingSpaces + transpiledFunction.trimStart());
     }
 
-    if (str.startsWith('local') && !str.includes('function')) {
+    if (str.includes('for')) {
+      const parts = str.split('=');
+      const variable = parts[0].trim().split(' ')[1];
+      const rangeValues = parts[1].split(',');
+      const start = rangeValues[0].trim();
+      const end = rangeValues[1].trim().replace('do', '');
+      const transpiledFor = `for ${variable} in range(${start}, ${end} + 1):`;
+
+      transpiledCode.push(leadingSpaces + transpiledFor.trimStart());
+    }
+
+    if (str.includes('local') && !str.includes('function')) {
       // Variable declaration with "local" keyword
-      const declaration = str.replace(/^local\s+/, '');
+      let declaration;
 
-      transpiledCode.push(leadingSpaces + declaration);
+      if(str.includes('=')) { 
+        declaration = str.replace('local ', '');
+        
+        if (declaration.includes('nil')) {
+          declaration = declaration.replace('nil', 'None');
+        }
+      } else {
+        declaration = str.replace('local ', '');
+        declaration = declaration + ' = None';
+      }
 
-    } else if (str.includes('=') && !str.includes('function') && !str.includes('if') && !str.includes('else') && !str.includes('elseif') && !str.includes('while')) {
+      transpiledCode.push(leadingSpaces + declaration.trimStart());
+    } else if (str.includes('=') && !str.includes('function') && !str.includes('for') && !str.includes('if') && !str.includes('else') && !str.includes('elseif') && !str.includes('while') && !str.includes('print')) {
       // Variable assignment or mathematical operation
-      const assignment = str.replace('=', '=');
+      let assignment = str.replace('local', '');
 
-      transpiledCode.push(leadingSpaces + assignment);
+      if (assignment.includes('nil')) {
+        assignment = assignment.replace('nil', 'None');
+      }
+
+      transpiledCode.push(leadingSpaces + assignment.trimStart());
     }
-
 
     if (str.match('print')) {
       // Transpile the Lua print statement to Python
@@ -87,15 +111,15 @@ function contarPalavras() {
         transpiledPrint = str.replace(/"'/g, 'print($1)');
       }
 
-      transpiledCode.push(leadingSpaces + transpiledPrint);
+      transpiledCode.push(leadingSpaces + transpiledPrint.trimStart());
     }
 
-    if (str.match(/^\w+\s*\((.*?)\)$/)) {
+    if (str.match(/^\w+\s*\((.*?)\)$/) && !str.includes('print')) {
       // Transpile the Lua function invocation to Python
       const transpiledInvocation = str.replace(/(\w+)\s*\((.*?)\)/, '$1($2)');
       // Push the transpiled function invocation into the transpiledCode array
-      
-      transpiledCode.push(leadingSpaces + transpiledInvocation);
+
+      transpiledCode.push(leadingSpaces + transpiledInvocation.trimStart());
     }
 
     // Assuming the Lua if statement is stored in the 'str' variable
@@ -110,7 +134,7 @@ function contarPalavras() {
       const transpiledIf = `if ${modifiedCondition}`;
 
       // Push the transpiled if statement into the transpiledCode array
-      transpiledCode.push(leadingSpaces + transpiledIf);
+      transpiledCode.push(leadingSpaces + transpiledIf.trimStart());
     }
 
     if (str.includes('else') && !str.includes('elseif')) {
@@ -118,7 +142,7 @@ function contarPalavras() {
       const transpiledElse = str.replace(/(^\s*)else\s*(.+)/, (_, leadingSpaces, rest) => `${leadingSpaces}else:${rest}`);
 
       // Push the transpiled "else" statement into the transpiledCode array
-      transpiledCode.push(transpiledElse + `:`);
+      transpiledCode.push(leadingSpaces + transpiledElse.trimStart() + `:`);
     }
 
     if (str.includes('elseif')) {
@@ -126,7 +150,7 @@ function contarPalavras() {
       const transpiledElseIf = str.replace(/(^\s*)elseif\s+(.+)/, (_, leadingSpaces, condition) => `${leadingSpaces}elif ${condition}`);
       const transpiledLine = transpiledElseIf.replace(/\bthen\b/, ':');
 
-      transpiledCode.push(transpiledLine);
+      transpiledCode.push(leadingSpaces + transpiledLine.trimStart());
     }
 
     if (str.includes('while')) {
@@ -140,7 +164,7 @@ function contarPalavras() {
       const transpiledWhile = `while ${modifiedCondition}`;
 
       // Push the transpiled while statement into the transpiledCode array
-      transpiledCode.push(leadingSpaces + transpiledWhile);
+      transpiledCode.push(leadingSpaces + transpiledWhile.trimStart());
     }
 
     if (str.includes('return')) {
@@ -151,7 +175,7 @@ function contarPalavras() {
       const transpiledReturn = `return ${value}`;
 
       // Push the transpiled return statement into the transpiledCode array
-      transpiledCode.push(leadingSpaces + transpiledReturn);
+      transpiledCode.push(leadingSpaces + transpiledReturn.trimStart());
     }
 
     if (!str.trim()) {
