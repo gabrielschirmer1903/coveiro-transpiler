@@ -30,7 +30,7 @@ function getLeadingSpaces(str) {
   return leadingSpacesMatch[0];
 }
 
-function transpileToRuby() {
+function transpileLuaToRuby() {
   const codigo = document.getElementById('CodeInput').value;
   let palavrasCodigo = codigo.split('\n');
   let transpiledCode = [];
@@ -51,12 +51,12 @@ function transpileToRuby() {
       }
     }
 
-    if (str.match('def')) {
+    if (str.match('function')) {
       // Extract the function name from the Lua code
-      const functionName = str.match(/def\s+(\w+)/);
+      const functionName = str.match(/function\s+(\w+)/);
 
       // Extract the function parameters from the Lua code
-      const parameters = str.match(/def\s+\w+\s*\((.*?)\)/);
+      const parameters = str.match(/function\s+\w+\s*\((.*?)\)/);
 
       // Remove 'local' keyword from the parameter declaration
       const transpiledParameters = parameters
@@ -64,11 +64,11 @@ function transpileToRuby() {
         : '';
 
       // Extract the function body from the Lua code
-      const body = str.match(/def[\s\S]*?end/);
+      const body = str.match(/function[\s\S]*?end/);
       const bodyString = body ? body[0] : '';
 
       // Build the transpiled function declaration string for Ruby
-      const transpiledFunction = `def ${functionName[1]}(${transpiledParameters})\n${bodyString}\nend`;
+      const transpiledFunction = `def ${functionName[1]}(${transpiledParameters})\n${bodyString}\n`;
 
       // Push the transpiled function into the transpiledCode array
       transpiledCode.push(leadingSpaces + transpiledFunction);
@@ -121,12 +121,12 @@ function transpileToRuby() {
       transpiledCode.push(leadingSpaces + transpiledInvocation);
     }
 
-    if (str.includes('if') && !str.includes('elsif')) {
+    if (str.includes('if') && !str.includes('elseif')) {
       // Extract the condition from the Lua code
       const condition = str.match(/if\s+(.+)/)[1];
 
       // Replace "then" with "then" in the condition
-      const modifiedCondition = condition.replace(/\bthen\b/, 'then');
+      const modifiedCondition = condition.replace(/\bthen\b/, '');
 
       // Build the transpiled if statement for Ruby
       const transpiledIf = `if ${modifiedCondition}`;
@@ -135,7 +135,7 @@ function transpileToRuby() {
       transpiledCode.push(leadingSpaces + transpiledIf);
     }
 
-    if (str.includes('else') && !str.includes('elsif')) {
+    if (str.includes('else') && !str.includes('elseif')) {
       // Transpile the "else" statement to "else"
       const transpiledElse = str.replace(
         /(^\s*)else\s*(.+)/,
@@ -146,10 +146,10 @@ function transpileToRuby() {
       transpiledCode.push(transpiledElse);
     }
 
-    if (str.includes('elsif')) {
+    if (str.includes('elseif')) {
       // Transpile "elsif" to "elsif" in Ruby
       const transpiledElsIf = str.replace(
-        /(^\s*)elsif\s+(.+)/,
+        /(^\s*)elseif\s+(.+)/,
         (_, leadingSpaces, condition) => `${leadingSpaces}elsif ${condition}`,
       );
 
@@ -186,17 +186,60 @@ function transpileToRuby() {
       transpiledCode.push(leadingSpaces + '');
     }
   }
-
   updateOutput(transpiledCode);
 }
 
-// Função para receber o código Lua do usuário
-function transpileLuaCode() {
-  const luaCode = document.getElementById('CodeInput').value;
+// // Função para receber o código Lua do usuário
+// function transpileLuaCode() {
+//   const luaCode = document.getElementById('CodeInput').value;
 
-  // Transpila o código Lua para Ruby
-  const rubyCode = transpileLuaToRuby(luaCode);
+//   // Transpila o código Lua para Ruby
+//   const rubyCode = transpileLuaToRuby(luaCode);
 
-  // Exibe o código Ruby resultante
-  updateOutput(rubyCode);
+//   // Exibe o código Ruby resultante
+//   updateOutput(rubyCode);
+// }
+
+function indentRubyCode(rubyCode) {
+  const lines = rubyCode.split('\n');
+  let indentLevel = 0;
+  let indentedCode = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    if (
+      line.includes('end') ||
+      line.includes('elsif') ||
+      line.includes('else') ||
+      line.includes('when')
+    ) {
+      indentLevel--;
+    }
+
+   // indentedCode += '  '.repeat(indentLevel) + line + '\n';
+
+    if (
+      line.startsWith('if') ||
+      line.startsWith('elsif') ||
+      line.startsWith('unless') ||
+      line.startsWith('while') ||
+      line.startsWith('until') ||
+      line.startsWith('for') ||
+      line.startsWith('case') ||
+      line.endsWith('do') ||
+      line.endsWith('then')
+    ) {
+      indentLevel++;
+    }
+  }
+
+  return indentedCode;
+}
+
+function transpileToRuby() {
+  transpileLuaToRuby();
+  const rubyCode = document.getElementById('contador').value;
+  const indentedRubyCode = indentRubyCode(rubyCode);
+  updateOutput(indentedRubyCode);
 }
