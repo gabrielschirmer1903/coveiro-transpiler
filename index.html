@@ -16,10 +16,22 @@
             <div class="inpupt-wrapper">
                 <textarea id="CodeInput" rows="20" cols="80" placeholder="Insira um trecho de codigo em Visualg: ">
 
-if age >= 18 then
-    print ("Maior de idade")
-else
-    print ("Menor de idade")
+function fibonacci(n)
+    if n <= 0 then
+        return "O número deve ser maior que zero."
+    elseif n == 1 then
+        return 0
+    elseif n == 2 then
+        return 1
+    else
+        local a, b = 0, 1
+        local result
+        for i = 3, n do
+            result = a + b
+            a, b = b, result
+        end
+        return result
+    end
 end
                 </textarea>
                 <br>
