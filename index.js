@@ -62,7 +62,10 @@ function contarPalavras() {
       const rangeValues = parts[1].split(',');
       const start = rangeValues[0].trim();
       const end = rangeValues[1].trim().replace('do', '');
-      const transpiledFor = `for ${variable} in range(${start}, ${end} + 1):`;
+      let transpiledFor;
+
+      if (str.includes('#')) transpiledFor = `for ${variable} in ${end.replace('#', '')}:`;
+      else transpiledFor = `for ${variable} in range(${start}, ${end} + 1):`;
 
       transpiledCode.push(leadingSpaces + transpiledFor.trimStart());
     }
