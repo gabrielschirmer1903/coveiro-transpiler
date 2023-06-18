@@ -174,9 +174,9 @@ function transpileLuaToRuby() {
     }
 
     if (str.includes('elseif')) {
-      // Transpile "elsif" to "elsif" in Ruby
+      // Transpile "elseif" to "elsif" in Ruby
       let transpiledElsIf = str.replace(
-        /(^\s*)elsif\s+(.+)/,
+        /(^\s*)elseif\s+(.+)/,
         (_, leadingSpaces, condition) => `elsif ${condition}`,
       );
       transpiledElsIf = transpiledElsIf.replace(/\bthen\b/, '');
