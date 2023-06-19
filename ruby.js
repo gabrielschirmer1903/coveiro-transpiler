@@ -176,7 +176,7 @@ function transpileLuaToRuby() {
     // If block that transpiles the elseif statement from LUA to Ruby
     if (str.includes('elseif')) {
       let transpiledElsIf = str.replace(
-        /(^\s*)elsif\s+(.+)/,
+        /(^\s*)elseif\s+(.+)/,
         (_, leadingSpaces, condition) => `elsif ${condition}`,
       );
       transpiledElsIf = transpiledElsIf.replace(/\bthen\b/, '');
