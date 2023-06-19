@@ -47,23 +47,25 @@ function contarPalavras() {
         const parts = str.split('=');
         // Extracts the variable from the for loop
         const variable = parts[0].trim().split(' ')[1];
+        console.log(variable)
         // Extracts the range from the for loop
         const rangeValues = parts[1].split(',');
+        console.log(rangeValues)
         // Extracts the start and end values from the range
         const start = rangeValues[0].trim();
         const end = rangeValues[1].trim().replace('do', '');
 
-        transpiledFor = `for ${variable} in ${end.replace('#', '')}:`;
+        transpiledFor = `for ${variable} in range( ${start}, ${end.replace('#', '')} + 1):`;
 
       } else if (str.includes('ipairs')) {
         let parts = str.split('ipairs');
         let variable = parts[0].trim().split(',')[1].trim();
         variable = variable.replace('in', '');
-        transpiledFor = `for i, ${variable} in enumerate(${parts[1].trim().slice(0, -2)})`;
+        transpiledFor = `for i, ${variable} in enumerate(${parts[1].trim().slice(0, -2)}) :`;
       }
     
      
-      transpiledCode.push(leadingSpaces + transpiledFor.trimStart() + `:`);
+      transpiledCode.push(leadingSpaces + transpiledFor.trimStart());
     }
 
     // If block that transpiles variables and arrays from LUA to Python
