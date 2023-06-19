@@ -13,25 +13,7 @@ function contarPalavras() {
     const str = text.toLowerCase();
     const leadingSpaces = getLeadingSpaces(text);
 
-    // if (str.match(/^\w+\s*=\s*(.+)/)) {
-    //   const assignmentMatch = str.match(/^(\w+)\s*=\s*(.+)/);
-    //   if (assignmentMatch) {
-    //     const assignedVariable = assignmentMatch[1];
-    //     const assignedValue = assignmentMatch[2];
-
-    //     if (!variableDeclarationAdded && assignedVariable === variableName) {
-    //       // Add the variable declaration with the initial value
-    //       const declarationStatement = variableInitialValue ? `${assignedVariable} = ${variableInitialValue}` : assignedVariable;
-    //       variableDeclaration = variableDeclarationAdded ? assignedVariable : `${declarationStatement}`;
-    //       variableDeclarationAdded = true;
-    //     }
-
-    //     const transpiledVariableAssignment = `${assignedVariable} = ${assignedValue}`;
-    //     transpiledCode.push(leadingSpaces + transpiledVariableAssignment.trimStart());
-    //   }
-    // }
-
-    // console.info(str)
+    // If block that transpiles the function from LUA to Python
     if (str.match('function')) {
       // Extract the function name from the Lua code
       const functionName = str.match(/function\s+(\w+)/);
@@ -56,31 +38,49 @@ function contarPalavras() {
       transpiledCode.push(leadingSpaces + transpiledFunction.trimStart());
     }
 
+    // If block that transpiles the for loop from LUA to Python
     if (str.includes('for')) {
-      const parts = str.split('=');
-      const variable = parts[0].trim().split(' ')[1];
-      const rangeValues = parts[1].split(',');
-      const start = rangeValues[0].trim();
-      const end = rangeValues[1].trim().replace('do', '');
       let transpiledFor;
 
-      if (str.includes('#')) transpiledFor = `for ${variable} in ${end.replace('#', '')}:`;
-      else transpiledFor = `for ${variable} in range(${start}, ${end} + 1):`;
+      if (str.includes('=')) {
+        // Breaks the for to separate the variable and the range
+        const parts = str.split('=');
+        // Extracts the variable from the for loop
+        const variable = parts[0].trim().split(' ')[1];
+        // Extracts the range from the for loop
+        const rangeValues = parts[1].split(',');
+        // Extracts the start and end values from the range
+        const start = rangeValues[0].trim();
+        const end = rangeValues[1].trim().replace('do', '');
 
-      transpiledCode.push(leadingSpaces + transpiledFor.trimStart());
+        transpiledFor = `for ${variable} in ${end.replace('#', '')}:`;
+
+      } else if (str.includes('ipairs')) {
+        let parts = str.split('ipairs');
+        let variable = parts[0].trim().split(',')[1].trim();
+        variable = variable.replace('in', '');
+        transpiledFor = `for i, ${variable} in enumerate(${parts[1].trim().slice(0, -2)})`;
+      }
+    
+     
+      transpiledCode.push(leadingSpaces + transpiledFor.trimStart() + `:`);
     }
 
+    // If block that transpiles variables and arrays from LUA to Python
     if (str.includes('local') && !str.includes('function')) {
       // Variable declaration with "local" keyword
       let declaration;
 
       if(str.includes('=')) { 
+        // removes the local keyword from the declaration
         declaration = str.replace('local ', '');
         
+        // if it has nil, replace it with None
         if (declaration.includes('nil')) {
           declaration = declaration.replace('nil', 'None');
         }
       } else {
+        // removes the local keyword from the declaration
         declaration = str.replace('local ', '');
         declaration = declaration + ' = None';
       }
@@ -97,12 +97,15 @@ function contarPalavras() {
       transpiledCode.push(leadingSpaces + assignment.trimStart());
     }
 
+    // If block that transpiles the print statement from LUA to Python
     if (str.match('print')) {
-      // Transpile the Lua print statement to Python
       let transpiledPrint;
+      // ignores the print statement and delimiters the parentheses an gets the value inside them
       let condi = str.match(/print\s*\(\s*(.*?)\s*\)/);
 
+      // Checks if the print statement is using '..' to concatenate strings
       if (str.includes('..')) {
+        // Splits the string into an array of strings
         let splitStr = condi[1].split('..');
 
         transpiledPrint = 'str(' + splitStr[0] + ')' + '+';
@@ -115,7 +118,7 @@ function contarPalavras() {
           0,
           transpiledPrint.length - 1,
         );
-        transpiledPrint = 'print(' + transpiledPrint.replace(/"'/g, '') + ')';
+        transpiledPrint = 'print(' + transpiledPrint.replace(/"'/g, '') + '))';
       } else {
         transpiledPrint = str.replace(/"'/g, 'print($1)');
       }
@@ -123,42 +126,35 @@ function contarPalavras() {
       transpiledCode.push(leadingSpaces + transpiledPrint.trimStart());
     }
 
+    // If block that transpiles function calls from LUA to Ruby
     if (str.match(/^\w+\s*\((.*?)\)$/) && !str.includes('print')) {
-      // Transpile the Lua function invocation to Python
       const transpiledInvocation = str.replace(/(\w+)\s*\((.*?)\)/, '$1($2)');
-      // Push the transpiled function invocation into the transpiledCode array
 
       transpiledCode.push(leadingSpaces + transpiledInvocation.trimStart());
     }
 
-    // Assuming the Lua if statement is stored in the 'str' variable
+    // If block that transpiles the if statement from LUA to Python
     if (str.includes('if') && !str.includes('elseif')) {
-      // Extract the condition from the Lua code
+      // Ignores the if, delimiters the parentheses and copies the parmeters inside
       const condition = str.match(/if\s+(.+)/)[1];
-
-      // Replace "then" with ":" in the condition
       const modifiedCondition = condition.replace(/\bthen\b/, ':');
-
-      // Build the transpiled if statement for Python
       const transpiledIf = `if ${modifiedCondition}`;
 
-      // Push the transpiled if statement into the transpiledCode array
       transpiledCode.push(leadingSpaces + transpiledIf.trimStart());
     }
 
+    // If block that transpiles the else statement from LUA to Ruby
     if (str.includes('else') && !str.includes('elseif')) {
-      // Transpile the "else" statement to "else:"
       const transpiledElse = str.replace(
         /(^\s*)else\s*(.+)/,
         (_, leadingSpaces, rest) => `${leadingSpaces}else:${rest}`,
       );
 
-      // Push the transpiled "else" statement into the transpiledCode array
       transpiledCode.push(leadingSpaces + transpiledElse.trimStart() + `:`);
     }
 
+    // If block that transpiles the elseif statement from LUA to Ruby
     if (str.includes('elseif')) {
-      // Transpile "elseif" to "elif" in Python
       const transpiledElseIf = str.replace(
         /(^\s*)elseif\s+(.+)/,
         (_, leadingSpaces, condition) => `${leadingSpaces}elif ${condition}`,
@@ -168,31 +164,26 @@ function contarPalavras() {
       transpiledCode.push(leadingSpaces + transpiledLine.trimStart());
     }
 
+    // If block that transpiles the while statement from LUA to Python
     if (str.includes('while')) {
-      // Extract the condition from the Lua code
+      // Ignores the while, delimiters the parentheses and copies the parmeters inside
       const condition = str.match(/while\s+(.+)/)[1];
-
-      // Replace "do" with ":" in the condition
       const modifiedCondition = condition.replace(/\bdo\b/, ':');
-
-      // Build the transpiled while statement for Python
       const transpiledWhile = `while ${modifiedCondition}`;
 
       // Push the transpiled while statement into the transpiledCode array
       transpiledCode.push(leadingSpaces + transpiledWhile.trimStart());
     }
 
+    // If block that transpiles the return statement from LUA to Python
     if (str.includes('return')) {
-      // Extract the value from the Lua code
       const value = str.match(/return\s+(.+)/)[1];
-
-      // Build the transpiled return statement for Python
       const transpiledReturn = `return ${value}`;
 
-      // Push the transpiled return statement into the transpiledCode array
       transpiledCode.push(leadingSpaces + transpiledReturn.trimStart());
     }
 
+    // Adds blank lines to the transpiled code
     if (!str.trim()) {
       // Push an empty line into the transpiledCode array
       transpiledCode.push(leadingSpaces + '');
@@ -234,13 +225,10 @@ function getLeadingSpaces(str) {
   return leadingSpacesMatch[0];
 }
 
-// Função para receber o código Lua do usuário
+// Gets the Lua code from the textarea and transpiles it to Python
 function transpileLuaCode() {
   const luaCode = document.getElementById('CodeInput').value;
-
-  // Transpila o código Lua para Ruby
   const rubyCode = transpileLuaToRuby(luaCode);
 
-  // Exibe o código Ruby resultante
   updateOutput(rubyCode);
 }

@@ -5,19 +5,14 @@ function updateOutput(transpiledCode) {
   textarea.value = transpiledCode.join('\n');
 }
 
-// Function to add a line of transpiled code to the transpiledCode array
 function addTranspiledLine(line) {
-  // Push the line of code to the transpiledCode array
   const leadingSpaces = getLeadingSpaces(line);
 
   transpiledCode.push(leadingSpaces + line);
-  // Update the output
   updateOutput();
 }
 
-// Function to clear the transpiledCode array and update the output
 function limpacontador() {
-  // Clear the transpiledCode array
   const textarea = document.getElementById('contador');
 
   transpiledCode = [];
@@ -40,59 +35,40 @@ function transpileLuaToRuby() {
     const str = text.trim();
     const leadingSpaces = getLeadingSpaces(text);
 
-    // if (str.match(/^\w+\s*=\s*(.+)/)) {
-    //   const assignmentMatch = str.match(/^(\w+)\s*=\s*(.+)/);
-    //   if (assignmentMatch) {
-    //     const assignedVariable = assignmentMatch[1];
-    //     const assignedValue = assignmentMatch[2];
-
-    //     const transpiledVariableAssignment = `${assignedVariable} = ${assignedValue}`;
-    //     transpiledCode.push(leadingSpaces + transpiledVariableAssignment.trimStart());
-    //   }
-    // }
-
+    // If block that transpiles the function from LUA to Ruby
     if (str.match('function')) {
-      // Extract the function name from the Lua code
+      // This extracts the function name from the Lua code
       const functionName = str.match(/function\s+(\w+)/);
-
-      // Extract the function parameters from the Lua code
+      // This extracts the parameters from the Lua code
       const parameters = str.match(/function\s+\w+\s*\((.*?)\)/);
-
-      // Remove 'local' keyword from the parameter declaration
-      const transpiledParameters = parameters
-        ? parameters[1].replace(/local\s+([\w, ]+)/, '$1')
-        : '';
-
-      // Extract the function body from the Lua code
-      const body = str.match(/function[\s\S]*?end/);
-      const bodyString = body ? body[0] : '';
-
+      // Removes the local keyword from the parameters
+      const transpiledParameters = parameters ? parameters[1].replace(/local\s+([\w, ]+)/, '$1') : '';
       // Build the transpiled function declaration string for Ruby
       const transpiledFunction = `def ${functionName[1]}(${transpiledParameters})`;
 
-      // Push the transpiled function into the transpiledCode array
       transpiledCode.push(leadingSpaces + transpiledFunction.trimStart());
     }
 
+    // If block that transpiles the for loop from LUA to Ruby
     if (str.includes('for')) {
       let transpiledFor;
 
       if (str.includes('=')) {
+        // Breaks the for to separate the variable and the range
         const parts = str.split('=');
+        // Extracts the variable from the for loop
         const variable = parts[0].trim().split(' ')[1];
+        // Extracts the range from the for loop
         const rangeValues = parts[1].split(',');
+        // Extracts the start and end values from the range
         const start = rangeValues[0].trim();
         const end = rangeValues[1].trim().replace('do', '');
 
-        if (str.includes('#')) {
-          transpiledFor = `${start}..${end}.each do |${variable}|`;
-        } else if (str.includes('{')) {
-          
-        } else {
-          transpiledFor = `(${start}..${end}).each do |${variable}|`;
-        }
+        transpiledFor = `(${start}..${end}).each do |${variable}|`;
 
-      } else if (str.includes('ipairs')) {	
+        // Checks if the for loop is using the ipairs method
+      } else if (str.includes('ipairs')) {
+        // Basically does the same as above, breakes the for to get the necessary parameters
         let parts = str.split('ipairs');
         let indexName = parts[0].split(',')
         indexName = indexName[0].replace('for ', "")
@@ -107,18 +83,19 @@ function transpileLuaToRuby() {
     
       transpiledCode.push(leadingSpaces + transpiledFor.trimStart());
     }
-    
 
+    // If block that transpiles the end statement from LUA to Ruby
     if (str.match('end')) {
       transpiledCode.push(leadingSpaces + str.trimStart());
     }
 
-    // correct aparentaly
+    // If block that transpiles variables and arrays from LUA to Ruby
     if (str.startsWith('local') && !str.includes('function') && !str.includes('=')) {
-      // Variable declaration with "local" keyword
+      // removes the local keyword from the declaration
       let declaration = str.replace(/^local\s+/, '');
       declaration = str.replace('local', '');
 
+      // Since '=' doesn't exist, we need to add nil to the declaration
       transpiledCode.push(leadingSpaces + declaration + ' = nil');
     } else if (
       str.includes('=') &&
@@ -130,7 +107,8 @@ function transpileLuaToRuby() {
       !str.includes('print') &&
       !str.includes('while')
     ) {
-      // Variable assignment or mathematical operation
+      // Transpiles veriables, arrays and mathmatical operations from LUA to Ruby
+      // Removes the local keyword from the assignment
       let assignment = str.replace('local', '');
 
       if(assignment.includes('{') && assignment.includes('}')) {
@@ -141,14 +119,18 @@ function transpileLuaToRuby() {
       transpiledCode.push(leadingSpaces + assignment.trimStart());
     }
 
+    // If block that transpiles the print statement from LUA to Ruby
     if (str.match('print')) {
-      // Transpile the Lua print statement to Ruby
       let transpiledPrint;
+      // ignores the print statement and delimiters the parentheses an gets the value inside them
       let condi = str.match(/print\s*\(\s*(.*?)\s*\)/);
-      // print("Hello, " .. name .. "!")
+
+      // Checks if the print statement is using '..' to concatenate strings
       if (str.includes('..')) {
+        // Splits the string into an array of strings
         let splitStr = condi[1].split('..');
 
+        // Transpiles the print statement to Ruby using the interpolation method #{}
         transpiledPrint = 'puts ' + '"' + '#{' + splitStr[0] + '}';
         for (let i = 1; i < splitStr.length; i++) {
           transpiledPrint =
@@ -156,47 +138,43 @@ function transpileLuaToRuby() {
         }
         transpiledPrint = transpiledPrint + '"';
       } else {
+        // Transpiles the print statement to Ruby without the interpolation method #{}
         transpiledPrint = str.replace(/print\s*\(\s*(.*?)\s*\)/, 'puts $1');
       }
 
       transpiledCode.push(leadingSpaces + transpiledPrint.trimStart());
     }
 
+    // If block that transpiles function calls from LUA to Ruby
     if (str.match(/^\w+\s*\((.*?)\)$/) && !str.includes('print')) {
-      // Transpile the Lua function invocation to Ruby
       const transpiledInvocation = str.replace(/(\w+)\s*\((.*?)\)/, '$1($2)');
 
       transpiledCode.push(leadingSpaces + transpiledInvocation.trimStart());
     }
 
+    // If block that transpiles the if statement from LUA to Ruby
     if (str.includes('if') && !str.includes('elseif')) {
-      // Extract the condition from the Lua code
+      // Ignores the if, delimiters the parentheses and copies the parmeters inside
       const condition = str.match(/if\s+(.+)/)[1];
-
-      // Replace "then" with "then" in the condition
       const modifiedCondition = condition.replace(/\bthen\b/, '');
-
-      // Build the transpiled if statement for Ruby
       const transpiledIf = `if ${modifiedCondition}`;
 
-      // Push the transpiled if statement into the transpiledCode array
       transpiledCode.push(leadingSpaces + transpiledIf.trimStart());
     }
 
+    // If block that transpiles the else statement from LUA to Ruby
     if (str.includes('else') && !str.includes('elseif')) {
-      // Transpile the "else" statement to "else"
       let transpiledElse = str.replace(
         /(^\s*)else\s*(.+)/,
         (_, leadingSpaces, rest) => `else${rest}`,
       );
       transpiledElse = transpiledElse.replace(/\bthen\b/, '');
 
-      // Push the transpiled "else" statement into the transpiledCode array
       transpiledCode.push(leadingSpaces + transpiledElse.trimStart());
     }
 
+    // If block that transpiles the elseif statement from LUA to Ruby
     if (str.includes('elseif')) {
-      // Transpile "elsif" to "elsif" in Ruby
       let transpiledElsIf = str.replace(
         /(^\s*)elsif\s+(.+)/,
         (_, leadingSpaces, condition) => `elsif ${condition}`,
@@ -206,49 +184,31 @@ function transpileLuaToRuby() {
       transpiledCode.push(leadingSpaces + transpiledElsIf.trimStart());
     }
 
+    // If block that transpiles the while statement from LUA to Ruby
     if (str.includes('while')) {
-      // Extract the condition from the Lua code
+      // Ignores the while, delimiters the parentheses and copies the parmeters inside
       const condition = str.match(/while\s+(.+)/)[1];
-
-      // Replace "do" with "do" in the condition
       const modifiedCondition = condition.replace(/\bdo\b/, 'do');
-
-      // Build the transpiled while statement for Ruby
       const transpiledWhile = `while ${modifiedCondition}`;
 
-      // Push the transpiled while statement into the transpiledCode array
       transpiledCode.push(leadingSpaces + transpiledWhile.trimStart());
     }
 
+    // If block that transpiles the return statement from LUA to Ruby
     if (str.includes('return')) {
-      // Extract the value from the Lua code
       const value = str.match(/return\s+(.+)/)[1];
-
-      // Build the transpiled return statement for Ruby
       const transpiledReturn = `return ${value}`;
 
-      // Push the transpiled return statement into the transpiledCode array
       transpiledCode.push(leadingSpaces + transpiledReturn.trimStart());
     }
 
+    // Adds blank lines to the transpiled code
     if (!str.trim()) {
-      // Push an empty line into the transpiledCode array
       transpiledCode.push(leadingSpaces + '');
     }
   }
   updateOutput(transpiledCode);
 }
-
-// // Função para receber o código Lua do usuário
-// function transpileLuaCode() {
-//   const luaCode = document.getElementById('CodeInput').value;
-
-//   // Transpila o código Lua para Ruby
-//   const rubyCode = transpileLuaToRuby(luaCode);
-
-//   // Exibe o código Ruby resultante
-//   updateOutput(rubyCode);
-// }
 
 function indentRubyCode(rubyCode) {
   const lines = rubyCode.split('\n');
@@ -266,8 +226,6 @@ function indentRubyCode(rubyCode) {
     ) {
       indentLevel--;
     }
-
-   // indentedCode += '  '.repeat(indentLevel) + line + '\n';
 
     if (
       line.startsWith('if') ||
