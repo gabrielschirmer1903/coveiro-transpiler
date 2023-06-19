@@ -75,17 +75,34 @@ function transpileLuaToRuby() {
     }
 
     if (str.includes('for')) {
-      const parts = str.split('=');
-      const variable = parts[0].trim().split(' ')[1];
-      const rangeValues = parts[1].split(',');
-      const start = rangeValues[0].trim();
-      const end = rangeValues[1].trim().replace('do', '');
       let transpiledFor;
-    
-      if (str.includes('#')) {
-        transpiledFor = `${start}..${end}.each do |${variable}|`;
-      } else {
-        transpiledFor = `(${start}..${end}).each do |${variable}|`;
+
+      if (str.includes('=')) {
+        const parts = str.split('=');
+        const variable = parts[0].trim().split(' ')[1];
+        const rangeValues = parts[1].split(',');
+        const start = rangeValues[0].trim();
+        const end = rangeValues[1].trim().replace('do', '');
+
+        if (str.includes('#')) {
+          transpiledFor = `${start}..${end}.each do |${variable}|`;
+        } else if (str.includes('{')) {
+          
+        } else {
+          transpiledFor = `(${start}..${end}).each do |${variable}|`;
+        }
+
+      } else if (str.includes('ipairs')) {	
+        let parts = str.split('ipairs');
+        let indexName = parts[0].split(',')
+        indexName = indexName[0].replace('for ', "")
+
+        let variable = parts[1].split('(');
+        variable = parts[1].split(')');
+        variable = variable[0].replace('(', "")
+        const rangeValues = parts[0].split(',');
+
+        transpiledFor = `${variable}.each do |${indexName}|`;
       }
     
       transpiledCode.push(leadingSpaces + transpiledFor.trimStart());
@@ -114,8 +131,13 @@ function transpileLuaToRuby() {
       !str.includes('while')
     ) {
       // Variable assignment or mathematical operation
-      const assignment = str.replace('local', '');
+      let assignment = str.replace('local', '');
 
+      if(assignment.includes('{') && assignment.includes('}')) {
+        assignment = assignment.replace('{', '[');
+        assignment = assignment.replace('}', ']');
+      }
+      
       transpiledCode.push(leadingSpaces + assignment.trimStart());
     }
 
@@ -123,16 +145,16 @@ function transpileLuaToRuby() {
       // Transpile the Lua print statement to Ruby
       let transpiledPrint;
       let condi = str.match(/print\s*\(\s*(.*?)\s*\)/);
-
+      // print("Hello, " .. name .. "!")
       if (str.includes('..')) {
-       // Extract the content within the parentheses
-       let content = str.match(/print\s*\(\s*(.*?)\s*\)/)[1];
+        let splitStr = condi[1].split('..');
 
-       // Replace the Lua concatenation operator '..' with the Ruby string interpolation '#{...}'
-       let transpiledContent = content.replace(/\.\./g, '" + ');
-     
-       // Construct the Ruby print statement
-       transpiledPrint = `puts "${transpiledContent}"`;
+        transpiledPrint = 'puts ' + '"' + '#{' + splitStr[0] + '}';
+        for (let i = 1; i < splitStr.length; i++) {
+          transpiledPrint =
+            transpiledPrint + '#{' + splitStr[i] + '}';
+        }
+        transpiledPrint = transpiledPrint + '"';
       } else {
         transpiledPrint = str.replace(/print\s*\(\s*(.*?)\s*\)/, 'puts $1');
       }
